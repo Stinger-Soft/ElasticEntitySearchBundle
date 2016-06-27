@@ -14,6 +14,8 @@ namespace StingerSoft\ElasticEntitySearchBundle\Services;
 use StingerSoft\EntitySearchBundle\Services\AbstractSearchService;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 use StingerSoft\EntitySearchBundle\Model\Query;
+use Elasticsearch\ClientBuilder;
+use Elasticsearch\Client;
 
 class SearchService extends AbstractSearchService {
 	
@@ -21,34 +23,91 @@ class SearchService extends AbstractSearchService {
 
 	/**
 	 *
-	 * {@inheritDoc}
+	 * @var Client
+	 */
+	protected $client;
+
+	protected $configuration;
+
+	public function __construct(ClientConfiguration $configuration) {
+		$this->configuration = $configuration;
+		$this->client = ClientBuilder::create ()->build ();
+	}
+
+	public function createIndex() {
+		$params = [ 
+			'index' => $this->configuration->indexName,
+			'body' => [ 
+				'settings' => [ 
+					'number_of_shards' => 2,
+					'number_of_replicas' => 0 
+				] 
+			] 
+		];
+		
+		$response = $this->client->indices ()->create ( $params );
+		print_r ( $response );
+	}
+
+	public function deleteIndex() {
+		$deleteParams = [ 
+			'index' => $this->configuration->indexName 
+		];
+		$response = $this->client->indices ()->delete ( $deleteParams );
+		print_r ( $response );
+	}
+
+	/**
+	 *
+	 * {@inheritdoc}
 	 *
 	 * @see \StingerSoft\EntitySearchBundle\Services\SearchService::clearIndex()
 	 */
 	public function clearIndex() {
+		$this->deleteIndex ();
+		$this->createIndex ();
 	}
 
 	/**
 	 *
-	 * {@inheritDoc}
+	 * {@inheritdoc}
 	 *
 	 * @see \StingerSoft\EntitySearchBundle\Services\SearchService::saveDocument()
 	 */
 	public function saveDocument(\StingerSoft\EntitySearchBundle\Model\Document $document) {
+		$params = [ 
+			'index' => $this->configuration->indexName,
+			'type' => $document->getEntityClass (),
+			'id' => $document->getEntityId (),
+			'body' => [ ] 
+		];
+		foreach ( $document->getFields () as $key => $value ) {
+			$params['body'][$key] = $value;
+		}
+		$response = $this->client->index ( $params );
+		print_r ( $response );
 	}
 
 	/**
 	 *
-	 * {@inheritDoc}
+	 * {@inheritdoc}
 	 *
 	 * @see \StingerSoft\EntitySearchBundle\Services\SearchService::removeDocument()
 	 */
 	public function removeDocument(\StingerSoft\EntitySearchBundle\Model\Document $document) {
+		$params = [ 
+			'index' => $this->configuration->indexName,
+			'type' => $document->getEntityClass (),
+			'id' => $document->getEntityId () 
+		];
+		
+		$response = $this->client->delete ( $params );
+		print_r ( $response );
 	}
 
 	/**
 	 *
-	 * {@inheritDoc}
+	 * {@inheritdoc}
 	 *
 	 * @see \StingerSoft\EntitySearchBundle\Services\SearchService::autocomplete()
 	 */
@@ -57,7 +116,7 @@ class SearchService extends AbstractSearchService {
 
 	/**
 	 *
-	 * {@inheritDoc}
+	 * {@inheritdoc}
 	 *
 	 * @see \StingerSoft\EntitySearchBundle\Services\SearchService::search()
 	 */
@@ -66,4 +125,5 @@ class SearchService extends AbstractSearchService {
 
 	public function getIndexSize() {
 	}
+
 }
