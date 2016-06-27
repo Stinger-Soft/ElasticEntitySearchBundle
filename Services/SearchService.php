@@ -31,7 +31,7 @@ class SearchService extends AbstractSearchService {
 
 	public function __construct(ClientConfiguration $configuration) {
 		$this->configuration = $configuration;
-		$this->client = ClientBuilder::create ()->build ();
+		$this->client = ClientBuilder::create ()->setHosts(array($configuration->ipAddress))->build ();
 	}
 
 	public function createIndex() {
@@ -121,9 +121,14 @@ class SearchService extends AbstractSearchService {
 	 * @see \StingerSoft\EntitySearchBundle\Services\SearchService::search()
 	 */
 	public function search(Query $query) {
+		
 	}
 
 	public function getIndexSize() {
+		$response = $this->client->count([
+				'index' => $this->configuration->indexName,
+		]);
+		return $response;
 	}
 
 }
