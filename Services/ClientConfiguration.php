@@ -12,6 +12,11 @@
 namespace StingerSoft\ElasticEntitySearchBundle\Services;
 
 class ClientConfiguration {
+	
+	
+	public function __construct(array $config) {
+		
+	}
 
 	public $ipAddress;
 

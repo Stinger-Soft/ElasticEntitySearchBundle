@@ -15,10 +15,9 @@ use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
+use StingerSoft\ElasticEntitySearchBundle\Services\ClientConfiguration;
 
 /**
- * A Keen Metronic Admin Theme (http://www.keenthemes.com/) Bundle for Symfony2
- * with some additional libraries and PecPlatform specific customization.
  */
 class StingerSoftElasticEntitySearchExtension extends Extension {
 
@@ -29,9 +28,14 @@ class StingerSoftElasticEntitySearchExtension extends Extension {
 	 */
 	public function load(array $configs, ContainerBuilder $container) {
 		$configuration = new Configuration();
-		$this->processConfiguration($configuration, $configs);
+		$config = $this->processConfiguration($configuration, $configs);
 		
 		$loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
 		$loader->load('services.yml');
+		
+		$clientConfig = new ClientConfiguration($config);
+		
+		$searchService = $container->getDefinition('stinger_soft.elastica_entity_search.search_service');
+		$searchService->addArgument($clientConfig);
 	}
 }

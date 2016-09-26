@@ -28,8 +28,12 @@ class Configuration implements ConfigurationInterface {
 	 */
 	public function getConfigTreeBuilder() {
 		$treeBuilder = new TreeBuilder();
-		$treeBuilder->root('stinger_soft_elastic_entity_search');
+		$root = $treeBuilder->root('stinger_soft_elastic_entity_search');
 		// @formatter:off
+		$root->children()
+			->scalarNode('ipaddress')->defaultValue('127.0.0.1')->end()
+			->scalarNode('indexname')->defaultValue('stinger_search')->end()
+		->end();
 		// @formatter:on
 		
 		return $treeBuilder;

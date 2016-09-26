@@ -1,0 +1,7 @@
+parameters:
+  stinger_soft.elastica_entity_search.search_service.class: 'StingerSoft\ElasticaEntitySearchBundle\Services\SearchService'
+  
+  
+services:
+  stinger_soft.elastica_entity_search.search_service:
+    class: '%stinger_soft.elastica_entity_search.search_service.class%'
