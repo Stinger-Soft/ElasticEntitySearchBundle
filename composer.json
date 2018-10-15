@@ -27,6 +27,7 @@
 		"knplabs/knp-paginator-bundle" : "~2.5",
 		"stinger-soft/php-commons" : "^1.0.0",
 		"elasticsearch/elasticsearch" : "~6.0",
+		"ruflin/elastica" : "~6.0",
 		"monolog/monolog" : "~1.19"
 	},
 	"require-dev" : {
