@@ -33,9 +33,9 @@ class StingerSoftElasticEntitySearchExtension extends Extension {
 		$loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
 		$loader->load('services.yml');
 		
-		$clientConfig = new ClientConfiguration($config);
+
 		
 		$searchService = $container->getDefinition('stinger_soft.elastica_entity_search.search_service');
-		$searchService->addArgument($clientConfig);
+		$searchService->addArgument($config);
 	}
 }
