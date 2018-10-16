@@ -36,6 +36,6 @@ class StingerSoftElasticEntitySearchExtension extends Extension {
 
 		
 		$searchService = $container->getDefinition('stinger_soft.elastica_entity_search.search_service');
-		$searchService->addArgument($config);
+		$searchService->setArgument('$configuration', $config);
 	}
 }

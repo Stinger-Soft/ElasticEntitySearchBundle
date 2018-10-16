@@ -12,10 +12,16 @@
 
 namespace StingerSoft\ElasticEntitySearchBundle\Services;
 
+use Elastica\Index;
+use Elastica\Search;
 use Elasticsearch\Client;
 use Elasticsearch\ClientBuilder;
+use Knp\Component\Pager\PaginatorInterface;
+use StingerSoft\ElasticEntitySearchBundle\Model\KnpResultSet;
 use StingerSoft\EntitySearchBundle\Model\Query;
+use StingerSoft\EntitySearchBundle\Model\Result\FacetSetAdapter;
 use StingerSoft\EntitySearchBundle\Model\ResultSet;
+use StingerSoft\EntitySearchBundle\Model\ResultSetAdapter;
 use StingerSoft\EntitySearchBundle\Services\AbstractSearchService;
 
 class SearchService extends AbstractSearchService {
@@ -31,11 +37,16 @@ class SearchService extends AbstractSearchService {
 	 */
 	protected $configuration;
 
-	public function __construct(array $configuration) {
+	/**
+	 * @var PaginatorInterface
+	 */
+	protected $paginator;
+
+
+	public function __construct(PaginatorInterface $paginator, array $configuration = array()) {
 		$this->configuration = new ClientConfiguration($configuration);
-		$this->client = ClientBuilder::create()->setHosts(array(
-			$this->configuration->ipAddress
-		))->build();
+		$this->paginator = $paginator;
+
 	}
 
 	public function createIndex() {
@@ -45,20 +56,27 @@ class SearchService extends AbstractSearchService {
 				'settings' => [
 					'number_of_shards'   => 5,
 					'number_of_replicas' => 0
+				],
+				'doc'      => [
+					'properties' => [
+						'type'    => ['type' => 'keyword'],
+						'content' => ['type' => 'text'],
+						'title'   => ['type' => 'keyword'],
+					]
 				]
 			]
 		];
 
-		$response = $this->client->indices()->create($params);
-		print_r($response);
+		$response = $this->getClient()->indices()->create($params);
 	}
 
 	public function deleteIndex() {
 		$deleteParams = [
-			'index' => $this->configuration->indexName
+			'index' => $this->configuration->indexName,
 		];
-		$response = $this->client->indices()->delete($deleteParams);
-		print_r($response);
+		if($this->getClient()->indices()->exists($deleteParams)) {
+			$this->getClient()->indices()->delete($deleteParams);
+		}
 	}
 
 	/**
@@ -81,15 +99,22 @@ class SearchService extends AbstractSearchService {
 	public function saveDocument(\StingerSoft\EntitySearchBundle\Model\Document $document): void {
 		$params = [
 			'index' => $this->configuration->indexName,
-			'type'  => $document->getEntityClass(),
-			'id'    => $document->getEntityId(),
-			'body'  => []
+			'id'    => $document->getEntityClass() . '#' . $document->getEntityId(),
+			'type'  => 'doc',
+			'body'  => [
+				'internalId' => $document->getEntityId(),
+				'clazz'      => $document->getEntityClass(),
+				'entityType' => $document->getEntityType(),
+			]
 		];
 		foreach($document->getFields() as $key => $value) {
 			$params['body'][$key] = $value;
 		}
-		$response = $this->client->index($params);
-		print_r($response);
+		try {
+			$this->getClient()->index($params);
+		} catch(\Exception $e) {
+			print_r($e->getMessage());
+		}
 	}
 
 	/**
@@ -101,11 +126,11 @@ class SearchService extends AbstractSearchService {
 	public function removeDocument(\StingerSoft\EntitySearchBundle\Model\Document $document): void {
 		$params = [
 			'index' => $this->configuration->indexName,
-			'type'  => $document->getEntityClass(),
-			'id'    => $document->getEntityId()
+			'type'  => 'doc',
+			'id'    => $document->getEntityClass() . '#' . $document->getEntityId(),
 		];
 
-		$response = $this->client->delete($params);
+		$response = $this->getClient()->delete($params);
 		print_r($response);
 	}
 
@@ -116,6 +141,7 @@ class SearchService extends AbstractSearchService {
 	 * @see \StingerSoft\EntitySearchBundle\Services\SearchService::autocomplete()
 	 */
 	public function autocomplete(string $search, int $maxResults = 10): array {
+		return [];
 	}
 
 	/**
@@ -125,12 +151,39 @@ class SearchService extends AbstractSearchService {
 	 * @see \StingerSoft\EntitySearchBundle\Services\SearchService::search()
 	 */
 	public function search(Query $query): ?ResultSet {
+
+		$queryParams = [
+			'query' => [
+				'query_string' => [
+					'query' => $query->getSearchTerm(),
+				],
+			],
+		];
+
+		$elClient = new \Elastica\Client();
+		$elClient->setConfigValue('host', $this->configuration->ipAddress);
+
+		$elQuery = new \Elastica\Query($queryParams);
+		$index = new Index($elClient, $this->configuration->indexName);
+		$result = new KnpResultSet($this->paginator, $index, $elQuery, $queryParams);
+		$result->setFacets( new FacetSetAdapter());
+
+		return $result;
 	}
 
 	public function getIndexSize(): int {
-		$response = (int) $this->client->count([
+		$response = (int)$this->getClient()->count([
 			'index' => $this->configuration->indexName
 		]);
 		return $response;
+	}
+
+	protected function getClient(): Client {
+		if($this->client === null) {
+			$this->client = ClientBuilder::create()->setHosts(array(
+				$this->configuration->ipAddress
+			))->build();
+		}
+		return $this->client;
 	}
 }

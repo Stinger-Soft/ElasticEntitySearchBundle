@@ -15,6 +15,8 @@ class ClientConfiguration {
 	
 	
 	public function __construct(array $config) {
+		$this->ipAddress = $config['ipaddress'];
+		$this->indexName = $config['indexname'];
 		
 	}
 
