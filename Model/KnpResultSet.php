@@ -124,12 +124,44 @@ class KnpResultSet extends ResultSetAdapter implements PaginatableResultSet {
 	 * @see \StingerSoft\EntitySearchBundle\Model\ResultSet::getExcerpt()
 	 */
 	public function getExcerpt(Document $document): ?string {
+		if($document instanceof \StingerSoft\ElasticEntitySearchBundle\Model\Document) {
+			$result = $document->getInternalResult();
+			$highlights = $result->getHighlights();
+			if($highlights !== null && isset($highlights[Document::FIELD_CONTENT])) {
+				return \implode(' ', $highlights[Document::FIELD_CONTENT]);
+			}
+			if($highlights !== null && isset($highlights['attachment.'.Document::FIELD_CONTENT])) {
+				return \implode(' ', $highlights['attachment.'.Document::FIELD_CONTENT]);
+			}
+
+		}
 		return null;
 	}
 
+	/**
+	 *
+	 * {@inheritdoc}
+	 *
+	 * @see \StingerSoft\EntitySearchBundle\Model\ResultSet::getCorrections()
+	 */
 	public function getCorrections(): array {
 		$result = array();
-
+		if($this->lastSearchResult !== null) {
+			$response = $this->lastSearchResult->getResponse();
+			$data = $response->getData();
+			if(isset($data['suggest'])) {
+				foreach($data['suggest'] as $field => $suggestions) {
+					foreach($suggestions as $suggestion) {
+						foreach($suggestion['options'] as $replacement) {
+							$item = new Correction();
+							$item->setQuery($replacement['text']);
+							$item->setHits($replacement['freq'] ?? null);
+							$result[] = $item;
+						}
+					}
+				}
+			}
+		}
 		return $result;
 	}
 }

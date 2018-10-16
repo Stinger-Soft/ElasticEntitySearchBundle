@@ -26,6 +26,7 @@ class ElasticaQuerySubscriber extends \Knp\Component\Pager\Event\Subscriber\Pagi
 			 * @var $results ResultSet
 			 */
 			$results = $params['resultSet'];
+
 			$event->items = array();
 			foreach($results->getResults() as $result) {
 				$event->items[] = Document::createFromElasticResult($result);

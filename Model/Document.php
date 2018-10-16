@@ -18,23 +18,36 @@ use StingerSoft\EntitySearchBundle\Model\DocumentAdapter;
 
 class Document extends DocumentAdapter {
 
+	/**
+	 * @var Result
+	 */
+	protected $internalResult;
+
 	public static function createFromElasticResult(Result $result): self {
 		$document = new self();
+		$document->internalResult = $result;
 		foreach($result->getSource() as $key => $value) {
 			$document->addField($key, $value);
 		}
-		dump($document);
-		dump($result->getHit());
 		$document->setEntityType($document->getFieldValue('entityType'));
 		$document->setEntityClass($document->getFieldValue('clazz'));
 		$document->setEntityId($document->getFieldValue('internalId'));
 
 		// Map solr extractor properties to the document
-		$contentType = $document->getFieldValue("attr_Content-Type");
+		$contentType = $document->getFieldValue('attachment');
 		if($contentType !== null && $document->getFieldValue(\StingerSoft\EntitySearchBundle\Model\Document::FIELD_CONTENT_TYPE) === null) {
-			$document->addField(\StingerSoft\EntitySearchBundle\Model\Document::FIELD_CONTENT_TYPE, $contentType);
+			$document->addField(\StingerSoft\EntitySearchBundle\Model\Document::FIELD_CONTENT_TYPE, $contentType['content_type']);
 		}
+
 		return $document;
 	}
+
+	/**
+	 * @return Result
+	 */
+	public function getInternalResult(): Result {
+		return $this->internalResult;
+	}
+
 }
 

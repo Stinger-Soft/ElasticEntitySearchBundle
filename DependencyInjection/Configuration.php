@@ -32,7 +32,7 @@ class Configuration implements ConfigurationInterface {
 		// @formatter:off
 		$root->children()
 			->scalarNode('ipaddress')->defaultValue('127.0.0.1')->end()
-			->scalarNode('indexname')->defaultValue('stinger_search')->end()
+			->scalarNode('indexname')->defaultValue('stinger_search2')->end()
 		->end();
 		// @formatter:on
 		
