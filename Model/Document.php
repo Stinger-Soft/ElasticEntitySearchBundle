@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the Stinger Entity Search package.
+ * This file is part of the Stinger Elastic Entity Search package.
  *
  * (c) Oliver Kotte <oliver.kotte@stinger-soft.net>
  * (c) Florian Meyer <florian.meyer@stinger-soft.net>

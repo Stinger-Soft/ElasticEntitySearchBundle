@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 /*
  * This file is part of the Stinger Elastic Entity Search package.
@@ -18,6 +19,7 @@ use Elastica\Suggest;
 use Elasticsearch\Client;
 use Elasticsearch\ClientBuilder;
 use Knp\Component\Pager\PaginatorInterface;
+use Psr\Log\LoggerInterface;
 use StingerSoft\ElasticEntitySearchBundle\Model\KnpResultSet;
 use StingerSoft\EntitySearchBundle\Model\Document;
 use StingerSoft\EntitySearchBundle\Model\Query;
@@ -48,13 +50,21 @@ class SearchService extends AbstractSearchService {
 	 */
 	protected $paginator;
 
-	public function __construct(PaginatorInterface $paginator, array $configuration = array()) {
+	/**
+	 * @var LoggerInterface
+	 */
+	protected $logger;
+
+	public function __construct(PaginatorInterface $paginator, LoggerInterface $logger, array $configuration = array()) {
 		$this->configuration = new ClientConfiguration($configuration);
 		$this->paginator = $paginator;
-
+		$this->logger = $logger;
 	}
 
-	public function createIndex() {
+	/**
+	 *
+	 */
+	public function createIndex(): void {
 		$params = [
 			'index' => $this->configuration->indexName,
 			'body'  => [
@@ -128,7 +138,7 @@ class SearchService extends AbstractSearchService {
 							Document::FIELD_EDITORS            => ['type' => 'keyword'],
 							Document::FIELD_LAST_MODIFIED      => ['type' => 'date', 'format' => 'yyyy-MM-dd HH:mm:ss'],
 							Document::FIELD_DELETED_AT         => ['type' => 'date', 'format' => 'yyyy-MM-dd HH:mm:ss'],
-							'file_content'                     => ['type' => 'text'],
+							'file_content'                     => ['type' => 'text', 'index' => false],
 							'attachment.content'               => [
 								'type'     => 'text',
 								'analyzer' => 'standard'
@@ -149,7 +159,7 @@ class SearchService extends AbstractSearchService {
 				]
 			]
 		];
-
+		$this->logger->debug('Creating elastic index', ['params' => $params]);
 		$this->getClient()->indices()->create($params);
 
 		$params = [
@@ -166,13 +176,18 @@ class SearchService extends AbstractSearchService {
 				]
 			]
 		];
+		$this->logger->debug('Activating Inges Extract Pipeline', ['params' => $params]);
 		$this->getClient()->ingest()->putPipeline($params);
 	}
 
-	public function deleteIndex() {
+	/**
+	 *
+	 */
+	public function deleteIndex(): void {
 		$deleteParams = [
 			'index' => $this->configuration->indexName,
 		];
+		$this->logger->debug('Deleting index ' . $this->configuration->indexName);
 		if($this->getClient()->indices()->exists($deleteParams)) {
 			$this->getClient()->indices()->delete($deleteParams);
 		}
@@ -184,7 +199,7 @@ class SearchService extends AbstractSearchService {
 	 *
 	 * @see \StingerSoft\EntitySearchBundle\Services\SearchService::clearIndex()
 	 */
-	public function clearIndex() {
+	public function clearIndex(): void {
 		$this->deleteIndex();
 		$this->createIndex();
 	}
@@ -215,20 +230,28 @@ class SearchService extends AbstractSearchService {
 			if(\is_array($value)) {
 				$params['body'][$key] = [];
 				foreach($value as $item) {
-					$params['body'][$key][] = $this->stringifyValue($item);
+					$stringValue = $this->stringifyValue($item);
+					if(!empty($stringValue)) {
+						$params['body'][$key][] = $this->stringifyValue($stringValue);
+					}
 				}
 			} else {
-				$params['body'][$key] = $this->stringifyValue($value);
+				$stringValue = $this->stringifyValue($value);
+				if(!empty($stringValue)) {
+					$params['body'][$key] = $this->stringifyValue($stringValue);
+				}
 			}
 		}
 
 		$titles = $document->getFieldValue(Document::FIELD_TITLE);
-		$params['body'][Document::FIELD_TITLE . '_suggest'] = $titles;
+		if(!empty($titles)) {
+			$params['body'][Document::FIELD_TITLE . '_suggest'] = $titles;
+		}
 
 		try {
 			$this->getClient()->index($params);
 		} catch(\Exception $e) {
-			print_r($e->getMessage());
+			$this->logger->warning('Cannot index entity', ['exception' => $e, 'params' => $params]);
 		}
 
 	}
@@ -301,34 +324,15 @@ class SearchService extends AbstractSearchService {
 
 		$queryParams = [
 			'query'     => [
-				'bool' => [
-					'should' => [
-						[
-							'match' => [
-								Document::FIELD_TITLE => [
-									'query'     => $query->getSearchTerm(),
-									'fuzziness' => 'AUTO'
-								]
-							]
-						],
-						[
-							'match' => [
-								Document::FIELD_CONTENT => [
-									'query'     => $query->getSearchTerm(),
-									'fuzziness' => 'AUTO'
-								]
-							]
-						],
-						[
-							'match' => [
-								'attachment.' . Document::FIELD_CONTENT => [
-									'query'     => $query->getSearchTerm(),
-									'fuzziness' => 'AUTO'
-								]
-							]
-						],
+				'query_string' => [
+					'query'     => $query->getSearchTerm(),
+					'fields'    => [
+						Document::FIELD_TITLE,
+						Document::FIELD_CONTENT,
+						'attachment.' . Document::FIELD_CONTENT
 					],
-				],
+					'fuzziness' => 'AUTO'
+				]
 			],
 			'highlight' => [
 				'fields' => [
@@ -406,6 +410,12 @@ class SearchService extends AbstractSearchService {
 		return $result;
 	}
 
+	/**
+	 *
+	 * {@inheritdoc}
+	 *
+	 * @see \StingerSoft\EntitySearchBundle\Services\SearchService::getIndexSize()
+	 */
 	public function getIndexSize(): int {
 		$response = (int)$this->getClient()->count([
 			'index' => $this->configuration->indexName
@@ -413,9 +423,13 @@ class SearchService extends AbstractSearchService {
 		return $response;
 	}
 
-	protected function stringifyValue($value): ?string {
+	/**
+	 * @param $value
+	 * @return string
+	 */
+	protected function stringifyValue($value): string {
 		if(\is_scalar($value)) {
-			return $value;
+			return (string)$value;
 		}
 		if($value instanceof \DateTime) {
 			return $value->format('Y-m-d H:i:s');
@@ -424,9 +438,14 @@ class SearchService extends AbstractSearchService {
 			if(\method_exists($value, '__toString')) {
 				return $value->__toString();
 			}
-			$refl = new \ReflectionClass($value);
-			if($refl->implementsInterface('\Symfony\Component\Security\Core\User\UserInterface')) {
-				return $value->getUsername();
+
+			try {
+				$refl = new \ReflectionClass($value);
+				if($refl->implementsInterface('\Symfony\Component\Security\Core\User\UserInterface')) {
+					return $value->getUsername();
+				}
+			} catch(\ReflectionException $e) {
+				$this->logger->warning('Cannot create ReflectionClass for object of type ' . \get_class($value));
 			}
 
 			return \get_class($value);
@@ -434,30 +453,44 @@ class SearchService extends AbstractSearchService {
 		return '';
 	}
 
+	/**
+	 * @return Client
+	 */
 	protected function getClient(): Client {
 		if($this->client === null) {
 			$this->client = ClientBuilder::create()->setHosts(array(
 				$this->configuration->ipAddress
-			))->build();
+			))->setLogger($this->logger)->build();
 		}
 		return $this->client;
 	}
 
+	/**
+	 * @return \Elastica\Client
+	 */
 	protected function getElasticaClient(): \Elastica\Client {
 		if($this->elasticaClient === null) {
-			$this->elasticaClient = new \Elastica\Client();
+			$this->elasticaClient = new \Elastica\Client([], null, $this->logger);
 			$this->elasticaClient->setConfigValue('host', $this->configuration->ipAddress);
 		}
 		return $this->elasticaClient;
 	}
 
-	protected function escapeFacetKey($facetKey) {
+	/**
+	 * @param string $facetKey
+	 * @return string
+	 */
+	protected function escapeFacetKey(string $facetKey): string {
 		$facetKey = $facetKey === Document::FIELD_TYPE ? 'entityType' : $facetKey;
 //		$facetKey = $facetKey === Document::FIELD_CONTENT_TYPE ? 'attr_Content-Type' : $facetKey;
 		return $facetKey;
 	}
 
-	protected function unescapeFacetKey($facetKey) {
+	/**
+	 * @param string $facetKey
+	 * @return string
+	 */
+	protected function unescapeFacetKey(string $facetKey): string {
 		$facetKey = $facetKey === 'entityType' ? Document::FIELD_TYPE : $facetKey;
 //		$facetKey = $facetKey == 'attr_Content-Type' ? Document::FIELD_CONTENT_TYPE : $facetKey;
 		return $facetKey;

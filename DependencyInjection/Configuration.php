@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 /*
  * This file is part of the Stinger Elastic Entity Search package.
@@ -9,6 +10,7 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
+
 namespace StingerSoft\ElasticEntitySearchBundle\DependencyInjection;
 
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
@@ -35,7 +37,7 @@ class Configuration implements ConfigurationInterface {
 			->scalarNode('indexname')->defaultValue('stinger_search2')->end()
 		->end();
 		// @formatter:on
-		
+
 		return $treeBuilder;
 	}
 }

@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the Stinger Entity Search package.
+ * This file is part of the Stinger Elastic Entity Search package.
  *
  * (c) Oliver Kotte <oliver.kotte@stinger-soft.net>
  * (c) Florian Meyer <florian.meyer@stinger-soft.net>
@@ -130,8 +130,8 @@ class KnpResultSet extends ResultSetAdapter implements PaginatableResultSet {
 			if($highlights !== null && isset($highlights[Document::FIELD_CONTENT])) {
 				return \implode(' ', $highlights[Document::FIELD_CONTENT]);
 			}
-			if($highlights !== null && isset($highlights['attachment.'.Document::FIELD_CONTENT])) {
-				return \implode(' ', $highlights['attachment.'.Document::FIELD_CONTENT]);
+			if($highlights !== null && isset($highlights['attachment.' . Document::FIELD_CONTENT])) {
+				return \implode(' ', $highlights['attachment.' . Document::FIELD_CONTENT]);
 			}
 
 		}
