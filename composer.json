@@ -23,11 +23,11 @@
 	"license" : "Apache-2.0",
 	"require" : {
 		"php" : ">=7.2",
-		"stinger-soft/entity-search-bundle" : "~1.0@dev",
-		"knplabs/knp-paginator-bundle" : "~2.5",
-		"stinger-soft/php-commons" : "^1.0.0",
-		"elasticsearch/elasticsearch" : "~6.0",
-		"ruflin/elastica" : "~6.0",
+		"stinger-soft/entity-search-bundle" : "~1.1@dev",
+		"knplabs/knp-paginator-bundle" : "^5.0",
+		"stinger-soft/php-commons" : "^1.0",
+		"elasticsearch/elasticsearch" : "^6.0",
+		"ruflin/elastica" : "^6.0",
 		"monolog/monolog" : "~1.19"
 	},
 	"require-dev" : {
