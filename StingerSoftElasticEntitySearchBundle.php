@@ -18,10 +18,14 @@ use StingerSoft\DoctrineEntitySearchBundle\StingerSoftEntitySearchBundle;
  */
 class StingerSoftElasticEntitySearchBundle extends Bundle {
 
-	public static function getRequiredBundles($env) {
-		$bundles = array();
-		$bundles['StingerSoftElasticEntitySearchBundle'] = '\StingerSoft\ElasticEntitySearchBundle\StingerSoftElasticEntitySearchBundle';
-		$bundles = array_merge($bundles, StingerSoftEntitySearchBundle::getRequiredBundles($env));
-		return $bundles;
+	public static function getRequiredBundles(string $env, array &$requiredBundles = []): array {
+
+		if(isset($requiredBundles['StingerSoftElasticEntitySearchBundle'])) {
+			return $requiredBundles;
+		}
+
+		$requiredBundles['StingerSoftElasticEntitySearchBundle'] = '\StingerSoft\ElasticEntitySearchBundle\StingerSoftElasticEntitySearchBundle';
+		StingerSoftEntitySearchBundle::getRequiredBundles($env, $requiredBundles);
+		return $requiredBundles;
 	}
 }
