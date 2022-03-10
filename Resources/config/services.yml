@@ -1,7 +1,17 @@
 parameters:
-  stinger_soft.elastica_entity_search.search_service.class: 'StingerSoft\ElasticaEntitySearchBundle\Services\SearchService'
+  stinger_soft.elastica_entity_search.search_service.class: 'StingerSoft\ElasticEntitySearchBundle\Services\SearchService'
   
   
 services:
+  _defaults:
+    autoconfigure: true
+    autowire: true
+    public: false
+
+
   stinger_soft.elastica_entity_search.search_service:
     class: '%stinger_soft.elastica_entity_search.search_service.class%'
+
+  StingerSoft\ElasticEntitySearchBundle\Services\ElasticaQuerySubscriber:
+    tags:
+    - { name: 'knp_paginator.subscriber' }
