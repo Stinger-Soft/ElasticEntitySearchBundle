@@ -28,7 +28,7 @@ class Configuration implements ConfigurationInterface {
 	 * {@inheritDoc}
 	 *
 	 */
-	public function getConfigTreeBuilder() {
+	public function getConfigTreeBuilder(): void {
 		$treeBuilder = new TreeBuilder('stinger_soft_elastic_entity_search');
 
 		// @formatter:off

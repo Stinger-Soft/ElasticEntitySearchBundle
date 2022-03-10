@@ -31,29 +31,29 @@ class SearchService extends AbstractSearchService {
 
 	/**
 	 *
-	 * @var Client
+	 * @var Client|null
 	 */
-	protected $client;
+	protected ?Client $client = null;
 
 	/**
-	 * @var \Elastica\Client
+	 * @var \Elastica\Client|null
 	 */
-	protected $elasticaClient;
+	protected ?\Elastica\Client $elasticaClient = null;
 
 	/**
 	 * @var ClientConfiguration
 	 */
-	protected $configuration;
+	protected ClientConfiguration $configuration;
 
 	/**
 	 * @var PaginatorInterface
 	 */
-	protected $paginator;
+	protected PaginatorInterface $paginator;
 
 	/**
 	 * @var LoggerInterface
 	 */
-	protected $logger;
+	protected LoggerInterface $logger;
 
 	public function __construct(PaginatorInterface $paginator, LoggerInterface $logger, array $configuration = array()) {
 		$this->configuration = new ClientConfiguration($configuration);
@@ -76,12 +76,12 @@ class SearchService extends AbstractSearchService {
 							'trigram' => [
 								'type'      => 'custom',
 								'tokenizer' => 'standard',
-								'filter'    => ['standard', 'shingle']
+								'filter'    => ['lowercase', 'shingle']
 							],
 							'reverse' => [
 								'type'      => 'custom',
 								'tokenizer' => 'standard',
-								'filter'    => ['standard', 'reverse']
+								'filter'    => ['lowercase', 'reverse']
 							]
 						],
 						'filter'   => [
@@ -94,7 +94,7 @@ class SearchService extends AbstractSearchService {
 					]
 				],
 				'mappings' => [
-					'doc' => [
+//					'doc' => [
 						'_source'           => [
 							'enabled' => true
 						],
@@ -116,6 +116,7 @@ class SearchService extends AbstractSearchService {
 							],
 							Document::FIELD_TITLE              => [
 								'type'   => 'text',
+								"fielddata"=> true,
 								'fields' => [
 									'trigram' => [
 										'type'     => 'text',
@@ -141,22 +142,21 @@ class SearchService extends AbstractSearchService {
 							'file_content'                     => ['type' => 'text', 'index' => false],
 							'attachment.content'               => [
 								'type'     => 'text',
+								"fielddata"=> true,
 								'analyzer' => 'standard'
 							],
 							'attachment.title'                 => [
 								'type'     => 'text',
+								"fielddata"=> true,
 								'copy_to'  => 'title',
 								'analyzer' => 'standard'
 							],
 							'attachment.content_type'          => [
 								'type' => 'keyword'
 							],
-							//							"suggest"                     => [
-							//								"type" => "completion"
-							//							],
 						]
 					]
-				]
+//				]
 			]
 		];
 		$this->logger->debug('Creating elastic index', ['params' => $params]);
@@ -210,13 +210,14 @@ class SearchService extends AbstractSearchService {
 	 *
 	 * @see \StingerSoft\EntitySearchBundle\Services\SearchService::saveDocument()
 	 */
-	public function saveDocument(\StingerSoft\EntitySearchBundle\Model\Document $document): void {
+	public function saveDocument(Document $document): void {
+		$entityId = is_array($document->getEntityId()) ? implode('§§', $document->getEntityId()) : $document->getEntityId();
 		$params = [
 			'index' => $this->configuration->indexName,
-			'id'    => $document->getEntityClass() . '#' . $document->getEntityId(),
-			'type'  => 'doc',
+			'id'    => $document->getEntityClass() . '#' . $entityId,
+//			'type'  => 'doc',
 			'body'  => [
-				'internalId' => $document->getEntityId(),
+				'internalId' => $entityId,
 				'clazz'      => $document->getEntityClass(),
 				'entityType' => $document->getEntityType(),
 			]
@@ -226,6 +227,7 @@ class SearchService extends AbstractSearchService {
 			$params['body']['file_content'] = base64_encode(file_get_contents($document->getFile()));
 		}
 
+		/** @noinspection PhpInternalEntityUsedInspection */
 		foreach($document->getFields() as $key => $value) {
 			if(\is_array($value)) {
 				$params['body'][$key] = [];
@@ -262,10 +264,10 @@ class SearchService extends AbstractSearchService {
 	 *
 	 * @see \StingerSoft\EntitySearchBundle\Services\SearchService::removeDocument()
 	 */
-	public function removeDocument(\StingerSoft\EntitySearchBundle\Model\Document $document): void {
+	public function removeDocument(Document $document): void {
 		$params = [
 			'index' => $this->configuration->indexName,
-			'type'  => 'doc',
+//			'type'  => 'doc',
 			'id'    => $document->getEntityClass() . '#' . $document->getEntityId(),
 		];
 
@@ -417,10 +419,10 @@ class SearchService extends AbstractSearchService {
 	 * @see \StingerSoft\EntitySearchBundle\Services\SearchService::getIndexSize()
 	 */
 	public function getIndexSize(): int {
-		$response = (int)$this->getClient()->count([
+		$response = $this->getClient()->count([
 			'index' => $this->configuration->indexName
 		]);
-		return $response;
+		return (int)$response['count'];
 	}
 
 	/**

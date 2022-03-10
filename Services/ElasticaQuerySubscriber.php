@@ -24,7 +24,7 @@ class ElasticaQuerySubscriber extends \Knp\Component\Pager\Event\Subscriber\Pagi
 	/**
 	 * @param ItemsEvent $event
 	 */
-	public function items(ItemsEvent $event):void {
+	public function items(ItemsEvent $event): void {
 		if(\is_array($event->target) && 2 === count($event->target) && reset($event->target) instanceof SearchableInterface && end($event->target) instanceof Query) {
 			parent::items($event);
 

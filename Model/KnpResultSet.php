@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace StingerSoft\ElasticEntitySearchBundle\Model;
 
+use Elastica\Query;
 use Elastica\ResultSet;
 use Elastica\SearchableInterface;
 use Elasticsearch\Client;
@@ -27,47 +28,47 @@ class KnpResultSet extends ResultSetAdapter implements PaginatableResultSet {
 
 	/**
 	 *
-	 * @var \Elastica\Query
+	 * @var Query
 	 */
-	protected $query = null;
+	protected Query $query;
 
 	/**
 	 *
 	 * @var array
 	 */
-	protected $queryParams = null;
+	protected array $queryParams;
 
 	/**
 	 *
 	 * @var SearchableInterface
 	 */
-	protected $client = null;
+	protected SearchableInterface $client ;
 
 	/**
 	 *
-	 * @var SlidingPagination|Document[]
+	 * @var SlidingPagination|Document[]|null
 	 */
 	protected $lastResult = null;
 
 	/**
 	 *
-	 * @var ResultSet
+	 * @var array|callable|ResultSet|null
 	 */
-	protected $lastSearchResult = null;
+	protected $lastSearchResult;
 
 	/**
 	 * @var PaginatorInterface
 	 */
-	protected $paginator;
+	protected PaginatorInterface $paginator;
 
 	/**
 	 * KnpResultSet constructor.
 	 * @param PaginatorInterface $paginator
 	 * @param Client $client
-	 * @param \Elastica\Query $query
+	 * @param Query $query
 	 * @param string $term
 	 */
-	public function __construct(PaginatorInterface $paginator, SearchableInterface $client, \Elastica\Query $query, array $queryParams) {
+	public function __construct(PaginatorInterface $paginator, SearchableInterface $client, Query $query, array $queryParams) {
 		$this->query = $query;
 		$this->queryParams = $queryParams;
 		$this->client = $client;
@@ -97,8 +98,8 @@ class KnpResultSet extends ResultSetAdapter implements PaginatableResultSet {
 	 * @see \StingerSoft\EntitySearchBundle\Model\ResultSetAdapter::getResults()
 	 */
 	public function getResults(int $offset = 0, ?int $limit = null): array {
-		$oldStart = $this->query->getParam('from');
-		$oldOffset = $this->query->getParam('size');
+		$oldStart = $this->query->hasParam('from') ? $this->query->getParam('from') : 0;
+		$oldOffset = $this->query->hasParam('size') ? $this->query->getParam('size') : 10;
 
 		$this->query->setFrom($offset);
 		if($limit) {

@@ -19,9 +19,9 @@ use StingerSoft\EntitySearchBundle\Model\DocumentAdapter;
 class Document extends DocumentAdapter {
 
 	/**
-	 * @var Result
+	 * @var Result|null
 	 */
-	protected $internalResult;
+	protected ?Result $internalResult;
 
 	public static function createFromElasticResult(Result $result): self {
 		$document = new self();
